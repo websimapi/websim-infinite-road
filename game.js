@@ -7,6 +7,7 @@ class Game {
     this.maxSpeed = 5;
     this.acceleration = 0.1;
     this.deceleration = 0.05;
+    this.planetRotation = 0;
     
     this.keys = {
       ArrowUp: false,
@@ -15,8 +16,26 @@ class Game {
       ArrowRight: false
     };
 
+    this.createStars();
     this.setupEventListeners();
     this.gameLoop();
+  }
+
+  createStars() {
+    const stars = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    stars.classList.add('stars');
+    stars.setAttribute('viewBox', '0 0 1000 1000');
+    
+    for (let i = 0; i < 200; i++) {
+      const star = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      star.setAttribute('cx', Math.random() * 1000);
+      star.setAttribute('cy', Math.random() * 1000);
+      star.setAttribute('r', Math.random() * 2);
+      star.setAttribute('fill', '#fff');
+      stars.appendChild(star);
+    }
+    
+    document.body.appendChild(stars);
   }
 
   setupEventListeners() {
@@ -49,15 +68,25 @@ class Game {
 
     // Handle left/right movement
     if (this.keys.ArrowLeft) {
-      this.player.style.left = `${parseFloat(this.player.style.left || 50) - 1}%`;
+      const currentLeft = parseFloat(this.player.style.left || 50);
+      if (currentLeft > 20) {
+        this.player.style.left = `${currentLeft - 1}%`;
+      }
     }
     if (this.keys.ArrowRight) {
-      this.player.style.left = `${parseFloat(this.player.style.left || 50) + 1}%`;
+      const currentLeft = parseFloat(this.player.style.left || 50);
+      if (currentLeft < 80) {
+        this.player.style.left = `${currentLeft + 1}%`;
+      }
     }
 
     // Update position and apply movement
     this.position += this.speed;
+    this.planetRotation += this.speed * 0.01;
+    
     this.road.style.transform = `translateZ(${-this.position}px)`;
+    document.getElementById('planet').style.transform = 
+      `translateX(-50%) rotateX(${this.planetRotation}deg)`;
   }
 
   gameLoop() {

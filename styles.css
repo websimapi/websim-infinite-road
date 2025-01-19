@@ -2,14 +2,26 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background: #87CEEB;
+  background: linear-gradient(to bottom, #1a1a2e 0%, #16213e 100%);
 }
 
 #game-container {
   width: 100vw;
   height: 100vh;
-  perspective: 500px;
+  perspective: 1000px;
   position: relative;
+}
+
+#planet {
+  position: absolute;
+  width: 8000px;
+  height: 8000px;
+  bottom: -7000px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: linear-gradient(45deg, #2c5364, #203a43, #0f2027);
+  box-shadow: inset 0 -100px 100px rgba(0,0,0,0.5);
 }
 
 #road {
@@ -21,8 +33,8 @@ body {
 
 .road-segment {
   position: absolute;
-  width: 100%;
-  height: 1000%;
+  width: 300px;
+  height: 2000px;
   background: linear-gradient(
     to bottom,
     #333 0%,
@@ -32,9 +44,11 @@ body {
     #333 60%,
     #333 100%
   );
-  transform-origin: center top;
+  transform-origin: center bottom;
   transform: rotateX(85deg);
   background-size: 100% 100px;
+  left: 50%;
+  margin-left: -150px;
 }
 
 .road-segment::after {
@@ -59,7 +73,15 @@ body {
   width: 20px;
   height: 40px;
   background-color: #f00;
-  bottom: 100px;
+  bottom: 150px;
   left: 50%;
   transform: translateX(-50%);
+  transform-style: preserve-3d;
+}
+
+.stars {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
