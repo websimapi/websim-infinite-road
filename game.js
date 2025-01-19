@@ -13,18 +13,33 @@ class Game {
     this.visibleSegments = 20;
     this.cameraHeight = 50;
     this.cameraAngle = 0;
+    this.verticalSpeed = 0;
+    this.gravity = 0.5;
+    this.isGrounded = true;
+    this.jumpForce = 12;
+    this.mouseSensitivity = 0.002;
+    this.yaw = 0;
+    this.pitch = 0;
     
     this.keys = {
-      ArrowUp: false,
-      ArrowDown: false,
-      ArrowLeft: false,
-      ArrowRight: false
+      w: false,
+      s: false,
+      a: false,
+      d: false,
+      ' ': false
     };
 
     this.createStars();
     this.setupEventListeners();
     this.createRoadSegments();
+    this.lockPointer();
     this.gameLoop();
+  }
+
+  lockPointer() {
+    document.addEventListener('click', () => {
+      document.body.requestPointerLock();
+    });
   }
 
   createStars() {
@@ -45,11 +60,9 @@ class Game {
   }
 
   createRoadSegments() {
-    // Clear existing segments
     this.road.innerHTML = '';
     this.roadSegments = [];
 
-    // Create new segments
     for (let i = 0; i < this.visibleSegments; i++) {
       const segment = document.createElement('div');
       segment.className = 'road-segment';
@@ -61,8 +74,8 @@ class Game {
 
   updateSegmentPosition(segment, index) {
     const z = index * this.segmentLength;
-    const curve = Math.sin(z * 0.01) * 50; // Add slight curve to the road
-    const planetCurve = Math.pow(z * 0.01, 2) * 0.5; // Add planetary curvature
+    const curve = Math.sin(z * 0.01) * 50;
+    const planetCurve = Math.pow(z * 0.01, 2) * 0.5;
     
     segment.style.transform = `
       translateZ(${-z}px)
@@ -74,51 +87,81 @@ class Game {
 
   setupEventListeners() {
     document.addEventListener('keydown', (e) => {
-      if (this.keys.hasOwnProperty(e.key)) {
-        this.keys[e.key] = true;
+      if (this.keys.hasOwnProperty(e.key.toLowerCase())) {
+        this.keys[e.key.toLowerCase()] = true;
       }
     });
 
     document.addEventListener('keyup', (e) => {
-      if (this.keys.hasOwnProperty(e.key)) {
-        this.keys[e.key] = false;
+      if (this.keys.hasOwnProperty(e.key.toLowerCase())) {
+        this.keys[e.key.toLowerCase()] = false;
+      }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (document.pointerLockElement === document.body) {
+        this.yaw -= e.movementX * this.mouseSensitivity;
+        this.pitch = Math.max(-Math.PI/3, Math.min(Math.PI/3, 
+          this.pitch - e.movementY * this.mouseSensitivity));
       }
     });
   }
 
   update() {
-    // Handle forward/backward movement
-    if (this.keys.ArrowUp) {
-      this.speed = Math.min(this.speed + this.acceleration, this.maxSpeed);
-    } else if (this.keys.ArrowDown) {
-      this.speed = Math.max(this.speed - this.acceleration, -this.maxSpeed/2);
-    } else {
-      if (Math.abs(this.speed) < this.deceleration) {
-        this.speed = 0;
-      } else {
-        this.speed -= Math.sign(this.speed) * this.deceleration;
+    // Handle jumping and gravity
+    if (this.keys[' '] && this.isGrounded) {
+      this.verticalSpeed = this.jumpForce;
+      this.isGrounded = false;
+    }
+
+    if (!this.isGrounded) {
+      this.verticalSpeed -= this.gravity;
+      this.cameraHeight += this.verticalSpeed;
+
+      if (this.cameraHeight <= 50) {
+        this.cameraHeight = 50;
+        this.verticalSpeed = 0;
+        this.isGrounded = true;
       }
     }
 
-    // Update position and camera
-    this.position += this.speed;
-    this.planetRotation += this.speed * 0.02;
+    // Handle movement
+    let forward = 0;
+    let strafe = 0;
 
-    // Update camera angle based on speed
-    const targetAngle = this.speed * 2;
-    this.cameraAngle += (targetAngle - this.cameraAngle) * 0.1;
+    if (this.keys.w) forward += 1;
+    if (this.keys.s) forward -= 1;
+    if (this.keys.a) strafe -= 1;
+    if (this.keys.d) strafe += 1;
 
-    // Apply camera transformation
+    const moveAngle = Math.atan2(strafe, forward) + this.yaw;
+    const moveIntensity = Math.min(1, Math.sqrt(forward * forward + strafe * strafe));
+
+    if (moveIntensity > 0) {
+      this.speed = Math.min(this.speed + this.acceleration, this.maxSpeed);
+    } else {
+      this.speed = Math.max(0, this.speed - this.deceleration);
+    }
+
+    const velocityX = Math.sin(moveAngle) * this.speed * moveIntensity;
+    const velocityZ = Math.cos(moveAngle) * this.speed * moveIntensity;
+
+    this.position += velocityZ;
+    this.planetRotation += velocityZ * 0.02;
+
+    // Update camera
     this.camera.style.transform = `
-      translateX(-50%)
+      translateX(${-50 + velocityX * 10}%)
+      translateY(${-this.cameraHeight}px)
       translateZ(50px)
-      rotateX(${-this.cameraAngle}deg)
+      rotateX(${(this.pitch * 180) / Math.PI}deg)
+      rotateY(${(this.yaw * 180) / Math.PI}deg)
     `;
 
-    // Update road position and rotation
+    // Update road
     this.road.style.transform = `
       translateZ(${-this.position}px)
-      rotateX(${this.cameraAngle}deg)
+      rotateY(${(-this.yaw * 180) / Math.PI}deg)
     `;
 
     // Update planet rotation
